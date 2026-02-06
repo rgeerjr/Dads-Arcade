@@ -2,71 +2,70 @@
 <html>
 <head>
     <title>Dad's Arcade</title>
+    <!-- The "Retro" look CSS -->
     <link href="https://unpkg.com/nes.css/css/nes.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body { background-color: #212529; color: white; font-family: 'Press Start 2P', cursive; display: flex; justify-content: center; padding: 20px; }
-        .arcade-cabinet { max-width: 800px; width: 100%; border: 10px solid #555; background: #333; padding: 20px; border-radius: 20px; }
-        .marquee { background: #ff00ff; color: white; text-align: center; padding: 20px; font-size: 2rem; border-bottom: 5px solid white; text-shadow: 4px 4px #00ffff; margin-bottom: 20px; }
+        .arcade-cabinet { max-width: 800px; width: 100%; border: 10px solid #555; background: #1a1a1a; padding: 20px; border-radius: 20px; box-shadow: 0 0 50px #000; }
+        .marquee { background: #ff00ff; color: white; text-align: center; padding: 20px; font-size: 2rem; border: 4px solid white; text-shadow: 4px 4px #00ffff; margin-bottom: 30px; }
         .game-list { display: grid; grid-template-columns: 1fr; gap: 20px; }
-        .game-card { cursor: pointer; transition: 0.2s; }
-        .game-card:hover { transform: scale(1.02); }
-        .high-score { color: #f7d51d; float: right; }
+        .game-card { cursor: pointer; display: block; text-decoration: none; color: white; transition: 0.2s; background-color: #212529; }
+        .game-card:hover { transform: scale(1.02); background-color: #333 !important; }
+        .high-score { color: #f7d51d; float: right; font-size: 0.8rem; }
+        .play-tag { color: #209cee; font-size: 0.7rem; display: block; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="arcade-cabinet">
     <div class="marquee">DAD'S ARCADE</div>
-    
-    <div id="games" class="game-list">
-        <!-- Your games will appear here automatically -->
-        <p>Loading Arcade...</p>
-    </div>
+    <div id="games" class="game-list">Connecting to Supabase...</div>
 </div>
 
+<!-- Load Supabase Library -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
-    // --- YOUR SETTINGS ---
+    // --- STEP 3: PASTE YOUR KEYS BELOW ---
     const SB_URL = "https://qlpqgrzgwxoldtekcxpj.supabase.co";
-    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFscHFncnpnd3hvbGR0ZWtjeHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMzgzNDYsImV4cCI6MjA4NTkxNDM0Nn0.6XT9tyiUoapfQ7swhVO5ucDWWZwl2tZGEuNAErRhsW8";
-    // ---------------------
+    const SB_KEY = "sb_publishable_IY_M9y2juNwWx5vy7JcDHA_ejqbwv-5";
+    // -------------------------------------
 
-    const supabase = lib.createClient(SB_URL, SB_KEY);
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-    // List your games here! 
+    // List your games here. 'slug' must be the name of the folder you will create later.
     const myGames = [
         { name: "Space Blast", slug: "space-blast", icon: "🚀" },
-        { name: "Pixel Jump", slug: "pixel-jump", icon: "🍄" },
-        { name: "Retro Racer", slug: "retro-racer", icon: "🏎️" }
+        { name: "Pixel Jump", slug: "pixel-jump", icon: "🍄" }
     ];
 
-    async function loadScores() {
+    async function loadArcade() {
         const listDiv = document.getElementById('games');
         listDiv.innerHTML = '';
 
         for (let game of myGames) {
-            const { data } = await supabase
+            // Get the top score from your Supabase table
+            const { data, error } = await supabaseClient
                 .from('leaderboards')
                 .select('score, player_name')
                 .eq('game_slug', game.slug)
                 .order('score', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
 
-            const scoreText = data ? `${data.score} by ${data.player_name}` : "0000";
+            const scoreDisplay = data ? `${data.score} - ${data.player_name}` : "0000";
 
             listDiv.innerHTML += `
-                <div class="nes-container is-dark with-title game-card">
+                <a href="./${game.slug}/" class="nes-container is-dark with-title game-card">
                     <p class="title">${game.name}</p>
-                    <span>${game.icon} PLAY NOW</span>
-                    <span class="high-score">TOP: ${scoreText}</span>
-                </div>
+                    <span>${game.icon} <span class="play-tag">CLICK TO PLAY</span></span>
+                    <span class="high-score">RECORD: ${scoreDisplay}</span>
+                </a>
             `;
         }
     }
 
-    loadScores();
+    loadArcade();
 </script>
 </body>
 </html>
