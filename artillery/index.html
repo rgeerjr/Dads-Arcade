@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neon Artillery - Dad's Arcade</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: 'Press Start 2P', cursive; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        .cabinet { width: 380px; background: #222; border: 10px solid #444; border-radius: 20px; box-shadow: 0 0 50px #000; position: relative; }
+        .marquee { background: #00ffff; color: #000; padding: 15px; text-align: center; border-bottom: 5px solid #fff; font-size: 1rem; }
+        .bezel { background: #000; padding: 15px; position: relative; }
+        .bezel::after { content: " "; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 3px; pointer-events: none; }
+        canvas { background: #050505; width: 100%; display: block; cursor: crosshair; }
+        .controls-art { background: #333; height: 60px; display: flex; justify-content: center; align-items: center; border-top: 5px solid #111; color: #00ffff; font-size: 0.6rem; }
+        #game-over { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 4px solid #00ffff; padding: 20px; text-align: center; z-index: 10; width: 80%; }
+        input { font-family: 'Press Start 2P'; width: 80%; margin: 10px 0; padding: 5px; }
+        button { font-family: 'Press Start 2P'; background: #00ffff; color: black; border: none; padding: 10px; cursor: pointer; width: 100%; }
+    </style>
+</head>
+<body>
+
+<div class="cabinet">
+    <div class="marquee">NEON CANNON</div>
+    <div class="bezel">
+        <canvas id="artillery" width="320" height="400"></canvas>
+        <div id="game-over">
+            <h2 style="color:#00ffff">GAME OVER</h2>
+            <input type="text" id="playerName" maxlength="10" placeholder="NAME">
+            <button onclick="saveScore()">SAVE SCORE</button>
+        </div>
+    </div>
+    <div class="controls-art">CLICK TO FIRE</div>
+</div>
+
+<script>
+    const canvas = document.getElementById('artillery');
+    const ctx = canvas.getContext('2d');
+    let score = 0;
+    let shots = 10;
+    let ball = { x: -10, y: -10, vx: 0, vy: 0, active: false };
+    let target = { x: 200, y: 50, w: 30, dir: 1 };
+
+    function draw() {
+        ctx.fillStyle = "black"; ctx.fillRect(0,0,320,400);
+        
+        // Draw Cannon
+        ctx.strokeStyle = "white"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(160, 390); ctx.lineTo(160, 370); ctx.stroke();
+
+        // Target
+        target.x += 2 * target.dir;
+        if(target.x > 280 || target.x < 10) target.dir *= -1;
+        ctx.fillStyle = "#00ffff"; ctx.fillRect(target.x, target.y, target.w, 10);
+
+        // Projectile
+        if(ball.active) {
+            ball.x += ball.vx; ball.y += ball.vy;
+            ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(ball.x, ball.y, 4, 0, Math.PI*2); ctx.fill();
+            
+            // Hit Check
+            if(ball.y < target.y + 10 && ball.x > target.x && ball.x < target.x + target.w) {
+                score += 100; ball.active = false;
+            }
+            if(ball.y < 0) ball.active = false;
+        }
+
+        ctx.fillStyle = "white"; ctx.fillText("SHOTS:" + shots, 10, 20);
+        ctx.fillText("SCORE:" + score, 10, 40);
+
+        if(shots <= 0 && !ball.active) {
+            document.getElementById('game-over').style.display = 'block';
+        } else {
+            requestAnimationFrame(draw);
+        }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        if(shots > 0 && !ball.active) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (320 / rect.width);
+            const mouseY = (e.clientY - rect.top) * (400 / rect.height);
+            
+            ball.x = 160; ball.y = 370;
+            const angle = Math.atan2(mouseY - 370, mouseX - 160);
+            ball.vx = Math.cos(angle) * 7;
+            ball.vy = Math.sin(angle) * 7;
+            ball.active = true;
+            shots--;
+        }
+    });
+
+    const SB_URL = "YOUR_SUPABASE_URL";
+    const SB_KEY = "YOUR_SUPABASE_KEY";
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+    async function saveScore() {
+        const name = document.getElementById('playerName').value || "ANON";
+        await supabaseClient.from('leaderboards').insert([{ game_slug: 'artillery', player_name: name, score: score }]);
+        window.location.href = "../";
+    }
+
+    draw();
+</script>
+</body>
+</html>
